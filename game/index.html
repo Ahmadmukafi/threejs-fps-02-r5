@@ -1,0 +1,170 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEON BREACH — YARD-7 Tactical FPS</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0e24'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%2322e6ff'%3EN%3C/text%3E%3C/svg%3E">
+<style>
+  :root { --cyan:#22e6ff; --cyan-dim:#0e7d99; --ember:#ff5a2a; --indigo:#0b0e24; --panel:rgba(8,12,34,.82); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#05060f; font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif; color:#dfeaff; }
+  #app { position:fixed; inset:0; }
+  canvas.webgl { display:block; width:100%; height:100%; }
+  .overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:10; }
+  .hidden { display:none !important; }
+  .panel { background:var(--panel); border:1px solid rgba(34,230,255,.45); border-radius:14px; padding:28px 34px; max-width:640px; width:92%; box-shadow:0 0 60px rgba(34,230,255,.18), inset 0 0 40px rgba(34,230,255,.05); backdrop-filter:blur(3px); }
+  h1 { font-size:52px; letter-spacing:6px; color:var(--cyan); text-shadow:0 0 24px rgba(34,230,255,.8); text-align:center; }
+  h1 .breach { color:var(--ember); text-shadow:0 0 24px rgba(255,90,42,.8); }
+  .sub { text-align:center; letter-spacing:4px; color:#9fb4ff; margin:6px 0 18px; font-size:14px; }
+  .rules { font-size:14px; line-height:1.65; color:#c7d4ff; margin-bottom:16px; }
+  .rules b { color:var(--cyan); } .rules .e { color:var(--ember); }
+  .controls { display:grid; grid-template-columns:1fr 1fr; gap:4px 18px; font-size:13px; color:#aebfe8; margin-bottom:20px; }
+  .controls b { color:#fff; }
+  .btn { display:block; margin:0 auto; padding:13px 42px; font-size:17px; letter-spacing:3px; font-weight:700; color:#04121a; background:linear-gradient(180deg,#4ff0ff,#12b8dd); border:none; border-radius:8px; cursor:pointer; box-shadow:0 0 26px rgba(34,230,255,.55); }
+  .btn:hover { filter:brightness(1.15); }
+  .btn.ember { background:linear-gradient(180deg,#ff8a5c,#e8441c); color:#fff; box-shadow:0 0 26px rgba(255,90,42,.5); }
+  .btn.ghost { background:transparent; color:var(--cyan); border:1px solid var(--cyan); box-shadow:none; font-size:13px; padding:9px 22px; }
+  /* HUD */
+  #hud { position:absolute; inset:0; pointer-events:none; z-index:5; font-size:14px; }
+  #topbar { position:absolute; top:12px; left:50%; transform:translateX(-50%); display:flex; gap:18px; align-items:center; background:var(--panel); border:1px solid rgba(34,230,255,.35); border-radius:8px; padding:7px 18px; }
+  #topbar .score { font-size:20px; font-weight:800; letter-spacing:2px; }
+  #topbar .score .v { color:var(--cyan); } #topbar .score .e { color:var(--ember); }
+  #timer { font-size:18px; font-weight:700; color:#fff; min-width:52px; text-align:center; }
+  #roundLabel { color:#9fb4ff; letter-spacing:2px; font-size:12px; }
+  #credits { color:#ffe45c; font-weight:700; }
+  #minimap { position:absolute; top:12px; right:12px; border:1px solid rgba(34,230,255,.5); border-radius:6px; background:rgba(5,8,20,.75); }
+  #kd { position:absolute; top:12px; left:12px; background:var(--panel); border:1px solid rgba(34,230,255,.3); border-radius:8px; padding:8px 12px; line-height:1.5; }
+  #kd b { color:#fff; } #kd span { color:#9fb4ff; font-size:12px; letter-spacing:1px; }
+  #bl { position:absolute; left:16px; bottom:16px; width:260px; }
+  .bar { height:14px; border:1px solid rgba(255,255,255,.35); border-radius:4px; overflow:hidden; background:rgba(0,0,0,.5); margin-top:3px; }
+  .bar > div { height:100%; }
+  #hpFill { background:linear-gradient(90deg,#19e68c,#0bbf7a); width:100%; }
+  #shFill { background:linear-gradient(90deg,#22e6ff,#2f7bff); width:0%; }
+  #hpText { font-weight:700; } #bl .lbl { font-size:11px; letter-spacing:2px; color:#9fb4ff; }
+  #br { position:absolute; right:16px; bottom:16px; text-align:right; }
+  #ammo { font-size:34px; font-weight:800; color:#fff; line-height:1; text-shadow:0 0 14px rgba(34,230,255,.6); }
+  #ammo small { font-size:15px; color:#9fb4ff; }
+  #weaponName { letter-spacing:2px; color:var(--cyan); font-size:13px; margin-top:2px; }
+  #grenades { color:#ffe45c; font-size:12px; letter-spacing:1px; margin-top:3px; }
+  #crosshair { position:absolute; left:50%; top:50%; width:0; height:0; }
+  #crosshair .dot { position:absolute; left:-2px; top:-2px; width:4px; height:4px; background:#fff; border-radius:50%; box-shadow:0 0 6px #fff; }
+  #crosshair .l { position:absolute; background:rgba(255,255,255,.9); box-shadow:0 0 5px rgba(34,230,255,.9); }
+  #hitmarker { position:absolute; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px; opacity:0; }
+  #hitmarker::before, #hitmarker::after { content:""; position:absolute; left:12px; top:0; width:2px; height:26px; background:#fff; transform:rotate(45deg); }
+  #hitmarker::after { transform:rotate(-45deg); }
+  #hitmarker.show { opacity:1; } #hitmarker.head { background:none; }
+  #hitmarker.head::before, #hitmarker.head::after { background:#ff3b3b; }
+  #killfeed { position:absolute; top:170px; right:12px; text-align:right; font-size:13px; line-height:1.7; color:#c7d4ff; text-shadow:0 1px 3px #000; }
+  #killfeed .v { color:var(--cyan); } #killfeed .e { color:var(--ember); }
+  #banner { position:absolute; top:22%; left:50%; transform:translateX(-50%); font-size:44px; font-weight:800; letter-spacing:6px; text-shadow:0 0 30px currentColor; opacity:0; transition:opacity .3s; }
+  #banner.show { opacity:1; }
+  #objective { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); background:var(--panel); border:1px solid rgba(255,228,92,.5); border-radius:8px; padding:6px 14px; font-size:13px; color:#ffe45c; letter-spacing:1px; }
+  #dmg { position:absolute; inset:0; pointer-events:none; opacity:0; background:radial-gradient(ellipse at center, transparent 55%, rgba(255,30,30,.55) 100%); transition:opacity .12s; }
+  #capBar { position:absolute; bottom:64px; left:50%; transform:translateX(-50%); width:280px; text-align:center; font-size:12px; letter-spacing:2px; color:var(--cyan); }
+  #capBar .bar { height:10px; } #capFill { background:var(--cyan); width:0%; }
+  /* Buy menu */
+  .shop { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0 18px; }
+  .item { border:1px solid rgba(34,230,255,.35); border-radius:10px; padding:12px 14px; cursor:pointer; background:rgba(10,16,40,.6); }
+  .item:hover { border-color:var(--cyan); }
+  .item.owned { border-color:#19e68c; background:rgba(10,40,26,.6); }
+  .item.cant { opacity:.45; cursor:not-allowed; }
+  .item h3 { font-size:15px; letter-spacing:1px; color:#fff; }
+  .item h3 span { float:right; color:#ffe45c; }
+  .item p { font-size:12px; color:#9fb4ff; line-height:1.5; margin-top:4px; }
+  .item .tag { font-size:11px; color:var(--cyan); letter-spacing:1px; }
+  #buyCredits { text-align:center; color:#ffe45c; font-size:18px; font-weight:700; }
+  #buyNote { text-align:center; color:#9fb4ff; font-size:12px; margin-top:8px; }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:16px 0; text-align:center; }
+  .stats div { background:rgba(10,16,40,.6); border:1px solid rgba(34,230,255,.3); border-radius:8px; padding:10px 4px; }
+  .stats b { display:block; font-size:24px; color:#fff; } .stats span { font-size:11px; letter-spacing:2px; color:#9fb4ff; }
+  #victoryTitle.win { color:var(--cyan); } #victoryTitle.lose { color:var(--ember); }
+  #hint { position:absolute; bottom:120px; left:50%; transform:translateX(-50%); color:#c7d4ff; font-size:12px; letter-spacing:1px; background:rgba(5,8,20,.6); padding:5px 12px; border-radius:6px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud" class="hidden">
+  <div id="topbar">
+    <span id="roundLabel">ROUND 1/9</span>
+    <span class="score"><span class="v">VOLT 0</span> — <span class="e">0 EMBER</span></span>
+    <span id="timer">1:40</span>
+    <span id="credits">◈ 800</span>
+  </div>
+  <div id="kd"><span>K / D</span><br><b id="kdText">0 / 0</b><br><span id="dmgText">DMG 0</span></div>
+  <canvas id="minimap" width="180" height="180"></canvas>
+  <div id="bl">
+    <div><span class="lbl">INTEGRITY</span> <span id="hpText">100</span></div>
+    <div class="bar"><div id="hpFill"></div></div>
+    <div style="margin-top:5px"><span class="lbl">SHIELD</span></div>
+    <div class="bar"><div id="shFill"></div></div>
+  </div>
+  <div id="br">
+    <div id="ammo">30 <small>/ 90</small></div>
+    <div id="weaponName">VK-9 RIPPER</div>
+    <div id="grenades">◉ NOVA GRENADE ×1 &nbsp;[G]</div>
+  </div>
+  <div id="crosshair"><div class="dot"></div><div class="l" id="chT"></div><div class="l" id="chB"></div><div class="l" id="chL"></div><div class="l" id="chR"></div></div>
+  <div id="hitmarker"></div>
+  <div id="killfeed"></div>
+  <div id="banner"></div>
+  <div id="objective">◆ Hold the UPLINK pad 8s — or eliminate all EMBER</div>
+  <div id="capBar" class="hidden">UPLINK CAPTURE<div class="bar"><div id="capFill"></div></div></div>
+  <div id="dmg"></div>
+  <div id="hint">WASD move · SHIFT walk · C crouch · R reload · G grenade · B buy</div>
+</div>
+
+<div id="titleScreen" class="overlay">
+  <div class="panel">
+    <h1>NEON <span class="breach">BREACH</span></h1>
+    <div class="sub">YARD-7 · ROUND-BASED TACTICAL FPS</div>
+    <div class="rules">
+      You are <b>VOLT</b>, three agents deep in the neon yard. <span class="e">EMBER</span> holds five.
+      First team to <b>5 rounds</b> (max 9) takes YARD-7. Win a round by <b>eliminating all EMBER</b>
+      or by holding the <b>UPLINK pad</b> for 8 seconds. Kills and round wins pay <b>credits</b> —
+      spend them between rounds on rifles, a DMR and kevlar. Stop, aim, breathe: moving fire sprays wide.
+    </div>
+    <div class="controls">
+      <div><b>W A S D</b> — move</div><div><b>Mouse</b> — aim (click to lock)</div>
+      <div><b>Click</b> — fire · <b>R</b> — reload</div><div><b>Shift</b> — walk silent · <b>C</b> — crouch</div>
+      <div><b>1 / 2 / 3</b> — swap weapon</div><div><b>G</b> — throw NOVA grenade</div>
+      <div><b>B</b> — buy menu (between rounds)</div><div><b>Esc</b> — release mouse</div>
+    </div>
+    <button class="btn" id="deployBtn">CLICK TO DEPLOY</button>
+  </div>
+</div>
+
+<div id="buyScreen" class="overlay hidden">
+  <div class="panel">
+    <h1 style="font-size:30px">BUY PHASE</h1>
+    <div class="sub" id="buyRound">ROUND 2 — SPEND YOUR CREDITS</div>
+    <div id="buyCredits">◈ 800</div>
+    <div class="shop" id="shop"></div>
+    <button class="btn" id="buyDeployBtn">DEPLOY</button>
+    <div id="buyNote">Click a weapon to buy it (1 / 2 / 3 to equip in round). Kevlar stacks once per round.</div>
+  </div>
+</div>
+
+<div id="endScreen" class="overlay hidden">
+  <div class="panel">
+    <h1 style="font-size:36px" id="victoryTitle">VOLT TAKES YARD-7</h1>
+    <div class="sub" id="finalScore">5 — 2</div>
+    <div class="stats">
+      <div><b id="stKills">0</b><span>KILLS</span></div>
+      <div><b id="stDeaths">0</b><span>DEATHS</span></div>
+      <div><b id="stDamage">0</b><span>DAMAGE</span></div>
+      <div><b id="stCredits">0</b><span>CREDITS</span></div>
+    </div>
+    <div class="rules" style="text-align:center" id="endBlurb">The uplink hums cyan. YARD-7 is yours, agent.</div>
+    <button class="btn" id="againBtn">PLAY AGAIN</button>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./three.module.min.js" } }
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
